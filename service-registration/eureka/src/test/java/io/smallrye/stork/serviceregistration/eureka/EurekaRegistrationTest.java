@@ -535,4 +535,69 @@ public class EurekaRegistrationTest {
         subscriber.awaitItem().assertCompleted();
     }
 
+    @Test
+    public void shouldNotRegisterSecurePortByDefault() {
+        String serviceName = "my-service";
+        TestConfigProvider.addServiceConfig(serviceName, null, null, "eureka", null, null,
+                Map.of("eureka-host", eureka.getHost(), "eureka-port", String.valueOf(port)));
+        Stork stork = StorkTestUtils.getNewStorkInstance();
+
+        stork.getService(serviceName).getServiceRegistrar()
+                .registerServiceInstance(serviceName, "10.96.96.231", 8406)
+                .await().atMost(Duration.ofSeconds(10));
+
+        JsonObject instance = getFirstInstance(serviceName);
+        assertThat(instance.getJsonObject("port").getString("@enabled")).isEqualTo("true");
+        assertThat(instance.getJsonObject("securePort").getString("@enabled")).isEqualTo("false");
+    }
+
+    @Test
+    public void shouldRegisterSecurePort() {
+        String serviceName = "my-service";
+        TestConfigProvider.addServiceConfig(serviceName, null, null, "eureka", null, null,
+                Map.of("eureka-host", eureka.getHost(), "eureka-port", String.valueOf(port),
+                        "secure-port", "443"));
+        Stork stork = StorkTestUtils.getNewStorkInstance();
+
+        stork.getService(serviceName).getServiceRegistrar()
+                .registerServiceInstance(serviceName, "10.96.96.231", 8406)
+                .await().atMost(Duration.ofSeconds(10));
+
+        JsonObject instance = getFirstInstance(serviceName);
+        assertThat(instance.getJsonObject("port").getInteger("$")).isEqualTo(8406);
+        assertThat(instance.getJsonObject("port").getString("@enabled")).isEqualTo("true");
+        assertThat(instance.getJsonObject("securePort").getInteger("$")).isEqualTo(443);
+        assertThat(instance.getJsonObject("securePort").getString("@enabled")).isEqualTo("true");
+        assertThat(instance.getString("secureVipAddress")).isEqualTo("my-service");
+    }
+
+    @Test
+    public void shouldRegisterSecurePortOnlyWithCustomSecureVipAddress() {
+        String serviceName = "my-service";
+        TestConfigProvider.addServiceConfig(serviceName, null, null, "eureka", null, null,
+                Map.of("eureka-host", eureka.getHost(), "eureka-port", String.valueOf(port),
+                        "secure-port", "8443", "secure-vip-address", "my-secure-vip",
+                        "non-secure-port-enabled", "false"));
+        Stork stork = StorkTestUtils.getNewStorkInstance();
+
+        stork.getService(serviceName).getServiceRegistrar()
+                .registerServiceInstance(serviceName, "10.96.96.231", 8406)
+                .await().atMost(Duration.ofSeconds(10));
+
+        JsonObject instance = getFirstInstance(serviceName);
+        assertThat(instance.getJsonObject("port").getString("@enabled")).isEqualTo("false");
+        assertThat(instance.getJsonObject("securePort").getInteger("$")).isEqualTo(8443);
+        assertThat(instance.getJsonObject("securePort").getString("@enabled")).isEqualTo("true");
+        assertThat(instance.getString("vipAddress")).isEqualTo("my-service");
+        assertThat(instance.getString("secureVipAddress")).isEqualTo("my-secure-vip");
+    }
+
+    private JsonObject getFirstInstance(String serviceName) {
+        HttpResponse<Buffer> response = client.get("/eureka/apps/" + serviceName)
+                .putHeader("Accept", "application/json;charset=UTF-8").send()
+                .await().atMost(Duration.ofSeconds(10));
+        assertThat(response.statusCode()).isEqualTo(200);
+        return response.bodyAsJsonObject().getJsonObject("application").getJsonArray("instance").getJsonObject(0);
+    }
+
 }
