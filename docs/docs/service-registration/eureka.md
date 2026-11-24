@@ -41,6 +41,15 @@ Eureka service registrar is configured with the following parameters:
 The `ipAddress` passed to `registerServiceInstance()` is used as both the IP address (`ipAddr`) and the hostname (`hostName`) registered in Eureka.
 If the instance has a distinct DNS hostname, set `host-name` explicitly to override this default.
 
+## Lease renewal
+
+Eureka evicts an instance whose lease is not renewed within the lease duration.
+Stork renews the lease of each registered instance every `lease-renewal-interval` (default: 30 seconds) and registers the instance again if Eureka does not know it, e.g. after a restart of the Eureka server or if the initial registration failed.
+Renewals stop when the instance is deregistered.
+The registrar sends `lease-renewal-interval` and `lease-duration` (default: 90 seconds) to Eureka as lease information.
+
+If you set `lease-renewal-enabled=false`, Eureka evicts the instance once `lease-duration` has expired.
+
 ## Service deregistration configuration
 
 There is no specific configuration required to enable deregistration; however, you must ensure that a consul service registrar is configured for the service:

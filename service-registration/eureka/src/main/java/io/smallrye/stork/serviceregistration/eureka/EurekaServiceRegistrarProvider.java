@@ -17,6 +17,9 @@ import io.smallrye.stork.spi.StorkInfrastructure;
 @ServiceRegistrarAttribute(name = "eureka-tls", description = "Use TLS to connect to the Eureka server", defaultValue = "false")
 @ServiceRegistrarAttribute(name = "health-check-url", description = "The liveness http address.", defaultValue = "")
 @ServiceRegistrarAttribute(name = "host-name", description = "The host name to register in Eureka. If not set, the ipAddress is used.", defaultValue = "")
+@ServiceRegistrarAttribute(name = "lease-renewal-enabled", description = "Whether to renew the lease of the registered instances periodically. If disabled, Eureka evicts the instances once the lease duration has expired.", defaultValue = "true")
+@ServiceRegistrarAttribute(name = "lease-renewal-interval", description = "How often the lease of the registered instances is renewed.", defaultValue = "30s")
+@ServiceRegistrarAttribute(name = "lease-duration", description = "How long Eureka keeps an instance without lease renewal before evicting it.", defaultValue = "90s")
 @ApplicationScoped
 public class EurekaServiceRegistrarProvider
         implements ServiceRegistrarProvider<EurekaRegistrarConfiguration, EurekaMetadataKey> {
